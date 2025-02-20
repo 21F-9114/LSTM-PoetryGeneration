@@ -12,18 +12,40 @@ with open("tokenizer.pkl", "rb") as f:
 
 # Function to generate poetry
 def generate_poetry(seed_text, max_words=50):
+    poetry_output = seed_text
+    
     for _ in range(max_words):
+        # Convert seed text to tokens
         token_list = tokenizer.texts_to_sequences([seed_text])[0]
+        
+        # Check if token_list is empty or too short
+        if len(token_list) == 0:
+            poetry_output = "No valid tokens found in the seed text. Please enter a valid phrase."
+            break
+        
+        # Reshape for model input (add batch dimension)
         token_list = np.array(token_list).reshape(1, -1)
-
-        predicted = np.argmax(model.predict(token_list), axis=-1)[0]
+        
+        # Ensure model receives valid input (pad if necessary)
+        # You may need to adjust this part to match your tokenizer settings
+        token_list = tf.keras.preprocessing.sequence.pad_sequences(token_list, padding='pre', maxlen=100)
+        
+        # Make the prediction
+        prediction = model.predict(token_list)
+        
+        # Get predicted word index and map it to the word
+        predicted = np.argmax(prediction, axis=-1)[0]
         output_word = tokenizer.index_word.get(predicted, "")
-
+        
+        # If the predicted word is empty, break the loop
         if output_word == "":
             break
-
+        
+        # Append the predicted word to the seed text for the next prediction
         seed_text += " " + output_word
-    return seed_text
+        poetry_output = seed_text
+    
+    return poetry_output
 
 # Streamlit UI Configuration
 st.set_page_config(page_title="Rang-e-Sukhan - Poetry Generator", layout="centered")
